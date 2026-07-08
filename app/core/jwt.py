@@ -39,19 +39,33 @@ PUBLIC_KEY_PATH = (
 # Load RSA Keys
 # --------------------------------------------------
 
-with open(
-    PRIVATE_KEY_PATH,
-    "r",
-) as file:
-    PRIVATE_KEY = file.read()
+PRIVATE_KEY = os.getenv(
+    "JWT_PRIVATE_KEY",
+)
+
+PUBLIC_KEY = os.getenv(
+    "JWT_PUBLIC_KEY",
+)
 
 
-with open(
-    PUBLIC_KEY_PATH,
-    "r",
-) as file:
-    PUBLIC_KEY = file.read()
+# Local development fallback
 
+if not PRIVATE_KEY:
+
+    with open(
+        PRIVATE_KEY_PATH,
+        "r",
+    ) as file:
+        PRIVATE_KEY = file.read()
+
+
+if not PUBLIC_KEY:
+
+    with open(
+        PUBLIC_KEY_PATH,
+        "r",
+    ) as file:
+        PUBLIC_KEY = file.read()
 
 
 # --------------------------------------------------
