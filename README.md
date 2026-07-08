@@ -1,4 +1,4 @@
-# Nativeee Identity
+# Nativee Identity
 
 > Centralized authentication and identity service powering the Nativeee platform.
 
@@ -16,13 +16,13 @@ It acts as the single source of truth for user identity while allowing other ser
                 Web Dashboard
                      │
                      ▼
-             Nativeee Identity
+             Nativee Identity
                      │
           RS256 Signed JWT Tokens
                      │
       ┌──────────────┴──────────────┐
       ▼                             ▼
- Nativeee API                 Nativeee Engine
+ Nativee API                 Nativee Engine
 ```
 
 ---
@@ -273,6 +273,6 @@ http://localhost:8000/docs
 
 # License
 
-Copyright © Nativeee.
+Copyright © Nativee.
 
 All rights reserved.
