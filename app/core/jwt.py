@@ -5,7 +5,9 @@ from datetime import (
 )
 
 from pathlib import Path
+
 import os
+import uuid
 
 from jose import (
     jwt,
@@ -13,9 +15,9 @@ from jose import (
 )
 
 
-# --------------------------------------------------
+# ==================================================
 # Paths
-# --------------------------------------------------
+# ==================================================
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -35,20 +37,20 @@ PUBLIC_KEY_PATH = (
 
 
 
-# --------------------------------------------------
-# Load RSA Keys
-# --------------------------------------------------
+# ==================================================
+# RSA Key Loading
+# ==================================================
 
 PRIVATE_KEY = os.getenv(
     "JWT_PRIVATE_KEY",
 )
+
 
 PUBLIC_KEY = os.getenv(
     "JWT_PUBLIC_KEY",
 )
 
 
-# Local development fallback
 
 if not PRIVATE_KEY:
 
@@ -56,7 +58,9 @@ if not PRIVATE_KEY:
         PRIVATE_KEY_PATH,
         "r",
     ) as file:
+
         PRIVATE_KEY = file.read()
+
 
 
 if not PUBLIC_KEY:
@@ -65,12 +69,14 @@ if not PUBLIC_KEY:
         PUBLIC_KEY_PATH,
         "r",
     ) as file:
+
         PUBLIC_KEY = file.read()
 
 
-# --------------------------------------------------
-# Identity JWT Configuration
-# --------------------------------------------------
+
+# ==================================================
+# JWT Configuration
+# ==================================================
 
 IDENTITY_ALGORITHM = os.getenv(
     "IDENTITY_ALGORITHM",
@@ -86,8 +92,15 @@ IDENTITY_ISSUER = os.getenv(
 
 IDENTITY_AUDIENCE = os.getenv(
     "IDENTITY_AUDIENCE",
-    "nativeee",
+    "nativee",
 )
+
+
+JWT_KEY_ID = os.getenv(
+    "JWT_KEY_ID",
+    "kid_2026_01",
+)
+
 
 
 ACCESS_TOKEN_EXPIRE_MINUTES = int(
@@ -96,6 +109,7 @@ ACCESS_TOKEN_EXPIRE_MINUTES = int(
         "15",
     )
 )
+
 
 
 REFRESH_TOKEN_EXPIRE_DAYS = int(
@@ -107,9 +121,40 @@ REFRESH_TOKEN_EXPIRE_DAYS = int(
 
 
 
-# --------------------------------------------------
+# ==================================================
+# Helpers
+# ==================================================
+
+def _now():
+
+    return datetime.now(
+        timezone.utc,
+    )
+
+
+
+def _generate_jti(
+    prefix: str,
+):
+
+    return (
+        f"{prefix}_"
+        f"{uuid.uuid4().hex}"
+    )
+
+
+
+def _jwt_headers():
+
+    return {
+        "kid": JWT_KEY_ID,
+    }
+
+
+
+# ==================================================
 # Create Access Token
-# --------------------------------------------------
+# ==================================================
 
 def create_access_token(
     *,
@@ -117,32 +162,34 @@ def create_access_token(
     session_id: str,
 ):
 
-    now = datetime.now(
-        timezone.utc,
-    )
+    now = _now()
 
 
     payload = {
 
         # ------------------------------
-        # Identity
+        # Public Identity
         # ------------------------------
 
-        "sub": str(
-            user.id,
-        ),
+        "sub": user.public_id,
 
-        "pid": user.public_id,
 
         "email": user.email,
 
-        "name": user.display_name,
 
-        "role": getattr(
+        "email_verified": getattr(
             user,
-            "role",
-            "user",
+            "email_verified",
+            False,
         ),
+
+
+        "phone_verified": getattr(
+            user,
+            "phone_verified",
+            False,
+        ),
+
 
         "is_active": getattr(
             user,
@@ -151,22 +198,44 @@ def create_access_token(
         ),
 
 
-        # Session identity
+
+        # ------------------------------
+        # Session
+        # ------------------------------
 
         "sid": session_id,
 
 
+
         # ------------------------------
-        # JWT Metadata
+        # Token Identity
+        # ------------------------------
+
+        "jti": _generate_jti(
+            "atk",
+        ),
+
+
+
+        # ------------------------------
+        # Token Type
         # ------------------------------
 
         "type": "access",
+
+
+
+        # ------------------------------
+        # JWT Claims
+        # ------------------------------
 
         "iss": IDENTITY_ISSUER,
 
         "aud": IDENTITY_AUDIENCE,
 
         "iat": now,
+
+        "nbf": now,
 
         "exp": (
             now
@@ -181,40 +250,71 @@ def create_access_token(
         payload,
         PRIVATE_KEY,
         algorithm=IDENTITY_ALGORITHM,
+        headers=_jwt_headers(),
     )
 
 
 
-# --------------------------------------------------
+# ==================================================
 # Create Refresh Token
-# --------------------------------------------------
+# ==================================================
 
 def create_refresh_token(
-    user_id: int,
+    *,
+    user_public_id: str,
     session_id: str,
 ):
 
-    now = datetime.now(
-        timezone.utc,
-    )
+    now = _now()
 
 
     payload = {
 
-        "sub": str(
-            user_id,
-        ),
+        # ------------------------------
+        # Public Identity
+        # ------------------------------
+
+        "sub": user_public_id,
+
+
+
+        # ------------------------------
+        # Session
+        # ------------------------------
 
         "sid": session_id,
 
 
+
+        # ------------------------------
+        # Token Identity
+        # ------------------------------
+
+        "jti": _generate_jti(
+            "rtk",
+        ),
+
+
+
+        # ------------------------------
+        # Token Type
+        # ------------------------------
+
         "type": "refresh",
+
+
+
+        # ------------------------------
+        # JWT Claims
+        # ------------------------------
 
         "iss": IDENTITY_ISSUER,
 
         "aud": IDENTITY_AUDIENCE,
 
         "iat": now,
+
+        "nbf": now,
 
         "exp": (
             now
@@ -229,13 +329,14 @@ def create_refresh_token(
         payload,
         PRIVATE_KEY,
         algorithm=IDENTITY_ALGORITHM,
+        headers=_jwt_headers(),
     )
 
 
 
-# --------------------------------------------------
+# ==================================================
 # Decode Token
-# --------------------------------------------------
+# ==================================================
 
 def decode_token(
     token: str,
@@ -260,9 +361,9 @@ def decode_token(
 
 
 
-# --------------------------------------------------
+# ==================================================
 # Decode Access Token
-# --------------------------------------------------
+# ==================================================
 
 def decode_access_token(
     token: str,
@@ -273,8 +374,10 @@ def decode_access_token(
     )
 
 
-    if payload is None:
+    if not payload:
+
         return None
+
 
 
     if payload.get(
@@ -284,13 +387,14 @@ def decode_access_token(
         return None
 
 
+
     return payload
 
 
 
-# --------------------------------------------------
+# ==================================================
 # Decode Refresh Token
-# --------------------------------------------------
+# ==================================================
 
 def decode_refresh_token(
     token: str,
@@ -301,8 +405,10 @@ def decode_refresh_token(
     )
 
 
-    if payload is None:
+    if not payload:
+
         return None
+
 
 
     if payload.get(
@@ -310,6 +416,7 @@ def decode_refresh_token(
     ) != "refresh":
 
         return None
+
 
 
     return payload

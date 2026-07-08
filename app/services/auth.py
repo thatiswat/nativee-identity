@@ -12,6 +12,12 @@ from app.core.security import (
     verify_password,
 )
 
+from app.core.exceptions import (
+    EmailAlreadyExistsException,
+    InvalidCredentialsException,
+    UserNotFoundException,
+)
+
 from app.models.user import User
 
 from app.repositories.user import UserRepository
@@ -39,7 +45,6 @@ class AuthService:
             db,
         )
 
-
     # ----------------------------------
     # Register
     # ----------------------------------
@@ -54,13 +59,12 @@ class AuthService:
         )
 
         if existing:
-            raise ValueError(
-                "Email already exists."
-            )
-
+            raise EmailAlreadyExistsException()
 
         user = User(
-            public_id=generate_id("usr"),
+            public_id=generate_id(
+                "usr",
+            ),
             email=request.email,
             password_hash=hash_password(
                 request.password,
@@ -68,11 +72,9 @@ class AuthService:
             display_name=request.display_name,
         )
 
-
         return self.users.create(
             user,
         )
-
 
     # ----------------------------------
     # Login
@@ -87,43 +89,34 @@ class AuthService:
             request.email,
         )
 
-
         if user is None:
-            raise ValueError(
-                "Invalid credentials."
-            )
-
+            raise InvalidCredentialsException()
 
         if not verify_password(
             request.password,
             user.password_hash,
         ):
-            raise ValueError(
-                "Invalid credentials."
-            )
-
+            raise InvalidCredentialsException()
 
         # ----------------------------------
-        # Create Session ID first
+        # Create Session ID
         # ----------------------------------
 
         session_id = generate_id(
             "ses",
         )
 
-
         # ----------------------------------
         # Create Refresh Token
         # ----------------------------------
 
         refresh_token = create_refresh_token(
-            user_id=user.id,
+            user_public_id=user.public_id,
             session_id=session_id,
         )
 
-
         # ----------------------------------
-        # Save Session
+        # Persist Session
         # ----------------------------------
 
         session = self.session_service.create(
@@ -131,7 +124,6 @@ class AuthService:
             user_id=user.id,
             refresh_token=refresh_token,
         )
-
 
         # ----------------------------------
         # Create Access Token
@@ -142,12 +134,10 @@ class AuthService:
             session_id=session.id,
         )
 
-
         return TokenResponse(
             access_token=access_token,
             refresh_token=refresh_token,
         )
-
 
     # ----------------------------------
     # Current User
@@ -162,12 +152,8 @@ class AuthService:
             user_id,
         )
 
-
         if user is None:
-            raise ValueError(
-                "User not found."
-            )
-
+            raise UserNotFoundException()
 
         return {
             "id": user.public_id,

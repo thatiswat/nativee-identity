@@ -22,9 +22,15 @@ class AuthSessionRepository:
         session: AuthSession,
     ):
 
-        self.db.add(session)
+        self.db.add(
+            session,
+        )
+
         self.db.commit()
-        self.db.refresh(session)
+
+        self.db.refresh(
+            session,
+        )
 
         return session
 
@@ -32,9 +38,9 @@ class AuthSessionRepository:
     # Read
     # ----------------------------------
 
-    def get_by_refresh_token(
+    def get_by_refresh_token_hash(
         self,
-        refresh_token: str,
+        refresh_token_hash: str,
     ):
 
         return (
@@ -42,7 +48,8 @@ class AuthSessionRepository:
                 AuthSession,
             )
             .filter(
-                AuthSession.refresh_token == refresh_token,
+                AuthSession.refresh_token_hash
+                == refresh_token_hash,
                 AuthSession.is_active == True,
             )
             .first()
@@ -58,7 +65,10 @@ class AuthSessionRepository:
     ):
 
         self.db.commit()
-        self.db.refresh(session)
+
+        self.db.refresh(
+            session,
+        )
 
         return session
 
@@ -74,7 +84,10 @@ class AuthSessionRepository:
         session.is_active = False
 
         self.db.commit()
-        self.db.refresh(session)
+
+        self.db.refresh(
+            session,
+        )
 
         return session
 
@@ -84,7 +97,7 @@ class AuthSessionRepository:
 
     def revoke_all(
         self,
-        user_id: str,
+        user_id: int,
     ):
 
         (

@@ -4,11 +4,26 @@ from datetime import (
     timezone,
 )
 
-from app.core.jwt import create_access_token
+from app.core.hash import (
+    sha256,
+)
 
-from app.models.auth_session import AuthSession
+from app.core.jwt import (
+    create_access_token,
+)
 
-from app.repositories.auth_session import AuthSessionRepository
+from app.core.exceptions import (
+    InvalidRefreshTokenException,
+    SessionExpiredException,
+)
+
+from app.models.auth_session import (
+    AuthSession,
+)
+
+from app.repositories.auth_session import (
+    AuthSessionRepository,
+)
 
 
 class AuthSessionService:
@@ -17,6 +32,7 @@ class AuthSessionService:
         self,
         db,
     ):
+
         self.sessions = AuthSessionRepository(
             db,
         )
@@ -38,14 +54,20 @@ class AuthSessionService:
         session = AuthSession(
             id=id,
             user_id=user_id,
-            refresh_token=refresh_token,
+            refresh_token_hash=sha256(
+                refresh_token,
+            ),
             device_name=device_name,
             ip_address=ip_address,
             user_agent=user_agent,
             is_active=True,
             expires_at=(
-                datetime.now(timezone.utc)
-                + timedelta(days=30)
+                datetime.now(
+                    timezone.utc,
+                )
+                + timedelta(
+                    days=30,
+                )
             ),
         )
 
@@ -62,19 +84,22 @@ class AuthSessionService:
         refresh_token: str,
     ):
 
-        session = self.sessions.get_by_refresh_token(
-            refresh_token,
+        session = self.sessions.get_by_refresh_token_hash(
+            sha256(
+                refresh_token,
+            ),
         )
 
         if session is None:
-            raise ValueError(
-                "Invalid refresh token."
-            )
+            raise InvalidRefreshTokenException()
 
-        if session.expires_at < datetime.now(timezone.utc):
-            raise ValueError(
-                "Session expired."
+        if (
+            session.expires_at
+            < datetime.now(
+                timezone.utc,
             )
+        ):
+            raise SessionExpiredException()
 
         access_token = create_access_token(
             user=session.user,
@@ -94,14 +119,14 @@ class AuthSessionService:
         refresh_token: str,
     ):
 
-        session = self.sessions.get_by_refresh_token(
-            refresh_token,
+        session = self.sessions.get_by_refresh_token_hash(
+            sha256(
+                refresh_token,
+            ),
         )
 
         if session is None:
-            raise ValueError(
-                "Session not found."
-            )
+            raise InvalidRefreshTokenException()
 
         self.sessions.revoke(
             session,

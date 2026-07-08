@@ -6,6 +6,7 @@ from sqlalchemy import (
     Integer,
     String,
 )
+
 from sqlalchemy.sql import func
 
 from app.database.base import Base
@@ -27,10 +28,11 @@ class AuthSession(Base):
         index=True,
     )
 
-    refresh_token = Column(
-        String,
+    refresh_token_hash = Column(
+        String(64),
         nullable=False,
         unique=True,
+        index=True,
     )
 
     device_name = Column(

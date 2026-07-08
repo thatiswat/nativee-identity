@@ -32,21 +32,25 @@ def get_current_user(
         credentials.credentials,
     )
 
-    if payload.get("type") != "access":
+    if payload is None:
         raise HTTPException(
             status_code=401,
             detail="Invalid token",
         )
 
-    try:
-        user_id = int(
-            payload["sub"],
+    if payload.get(
+        "type",
+    ) != "access":
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid token",
         )
-    except (
-        KeyError,
-        TypeError,
-        ValueError,
-    ):
+
+    public_id = payload.get(
+        "sub",
+    )
+
+    if not public_id:
         raise HTTPException(
             status_code=401,
             detail="Invalid token",
@@ -54,8 +58,8 @@ def get_current_user(
 
     user = UserRepository(
         db,
-    ).get_by_id(
-        user_id,
+    ).get_by_public_id(
+        public_id,
     )
 
     if user is None:
