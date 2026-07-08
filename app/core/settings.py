@@ -29,18 +29,30 @@ if not DATABASE_URL:
 
 
 # --------------------------------------------------
-# JWT
+# Identity JWT
 # --------------------------------------------------
 
-JWT_SECRET_KEY = os.getenv(
-    "JWT_SECRET_KEY",
-    "",
+IDENTITY_ISSUER = os.getenv(
+    "IDENTITY_ISSUER",
+    "http://127.0.0.1:8000",
 ).strip()
 
-JWT_ALGORITHM = os.getenv(
-    "JWT_ALGORITHM",
-    "HS256",
+
+IDENTITY_AUDIENCE = os.getenv(
+    "IDENTITY_AUDIENCE",
+    "nativeee",
 ).strip()
+
+
+IDENTITY_ALGORITHM = os.getenv(
+    "IDENTITY_ALGORITHM",
+    "RS256",
+).strip()
+
+
+# --------------------------------------------------
+# Token Expiry
+# --------------------------------------------------
 
 ACCESS_TOKEN_EXPIRE_MINUTES = int(
     os.getenv(
@@ -49,14 +61,10 @@ ACCESS_TOKEN_EXPIRE_MINUTES = int(
     )
 )
 
+
 REFRESH_TOKEN_EXPIRE_DAYS = int(
     os.getenv(
         "REFRESH_TOKEN_EXPIRE_DAYS",
         "30",
     )
 )
-
-if not JWT_SECRET_KEY:
-    raise RuntimeError(
-        "JWT_SECRET_KEY is missing."
-    )
