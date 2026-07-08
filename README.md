@@ -1,44 +1,61 @@
 # Nativee Identity
 
-> Centralized authentication and identity service powering the Nativeee platform.
+The centralized authentication and identity platform powering the Nativee ecosystem.
 
-Nativeee Identity is responsible for user authentication, authorization, session management, and JWT issuance across the Nativeee ecosystem.
+Nativee Identity is responsible for authentication, authorization, session management, and RS256 JWT issuance for every Nativee application and service.
 
-It acts as the single source of truth for user identity while allowing other services to remain stateless and independently scalable.
+It serves as the single source of truth for user identity, allowing the API, AI Engine, Web, Mobile, and future services to remain stateless and independently scalable.
 
 ---
 
-# Architecture
+# Overview
 
 ```text
-                Mobile App
-                     │
-                Web Dashboard
-                     │
-                     ▼
-             Nativee Identity
-                     │
-          RS256 Signed JWT Tokens
-                     │
-      ┌──────────────┴──────────────┐
-      ▼                             ▼
- Nativee API                 Nativee Engine
+                     Nativee Platform
+
+              Mobile • Web • SDKs • CLI
+                        │
+                        ▼
+                 Nativee Identity
+        Authentication • Sessions • JWT
+                        │
+                 RS256 Access Token
+                        │
+          ┌─────────────┴─────────────┐
+          ▼                           ▼
+     Nativee API               Nativee Engine
+ Business Platform             AI Runtime
 ```
 
 ---
 
 # Responsibilities
 
+Nativee Identity owns
+
 - User Registration
-- User Login
-- JWT Access Tokens
-- Refresh Tokens
+- User Authentication
+- Password Security
 - Session Management
-- Device Sessions
-- Email Verification
-- Password Reset
+- Refresh Tokens
+- JWT Generation
+- JWT Verification
+- Identity Claims
+- Email Verification (Upcoming)
+- Password Reset (Upcoming)
 - OAuth Providers (Upcoming)
 - Multi-Factor Authentication (Upcoming)
+
+Nativee Identity never owns
+
+- Projects
+- API Keys
+- Usage
+- Analytics
+- Billing
+- AI Execution
+
+Those responsibilities belong to Nativee API and Nativee Engine.
 
 ---
 
@@ -53,26 +70,41 @@ It acts as the single source of truth for user identity while allowing other ser
 - Current User
 - Password Hashing (bcrypt)
 
+---
+
 ## Security
 
 - RS256 JWT
-- RSA Key Pair
+- RSA Public / Private Keys
 - Refresh Token Rotation
 - Session Tracking
-- Token Expiration
 - JWT Claims Validation
+- Token Expiration
+- Issuer Validation
+- Audience Validation
+
+---
+
+## Identity
+
+- Public User IDs
+- Device Sessions
+- Identity Claims
+- Independent Authentication Service
+
+---
 
 ## Database
 
 - PostgreSQL
-- SQLAlchemy ORM
+- SQLAlchemy
 - Alembic Migrations
 
 ---
 
 # Tech Stack
 
-- Python 3.11+
+- Python 3.12+
 - FastAPI
 - SQLAlchemy
 - PostgreSQL
@@ -86,21 +118,36 @@ It acts as the single source of truth for user identity while allowing other ser
 # Project Structure
 
 ```text
-nativeee-identity/
+nativee-identity/
 
 ├── app/
-│   ├── api/
-│   ├── core/
-│   ├── database/
-│   ├── models/
-│   ├── repositories/
-│   ├── schemas/
-│   ├── services/
-│   ├── utils/
-│   └── keys/
+│
+├── api/
+│
+├── core/
+│
+├── database/
+│
+├── dependencies/
+│
+├── middleware/
+│
+├── models/
+│
+├── repositories/
+│
+├── schemas/
+│
+├── services/
+│
+├── utils/
+│
+└── keys/
 │
 ├── alembic/
+│
 ├── main.py
+│
 └── requirements.txt
 ```
 
@@ -109,33 +156,48 @@ nativeee-identity/
 # Authentication Flow
 
 ```text
+User
+
+↓
+
 Register
-    │
-    ▼
+
+↓
+
 Identity Database
-    │
-    ▼
+
+↓
+
 Login
-    │
-    ▼
-Access Token
-    │
-    ▼
-Refresh Token
-    │
-    ▼
-Nativeee API
-    │
-    ▼
-Verified User
-    │
-    ▼
+
+↓
+
+Create Session
+
+↓
+
+Generate RS256 JWT
+
+↓
+
+Return Access Token
+
+↓
+
+Nativee API
+
+↓
+
+Verify JWT
+
+↓
+
 Platform Access
 ```
 
 ---
 
-# JWT
+# JWT Structure
 
 Access Tokens are signed using **RS256**.
 
@@ -151,26 +213,64 @@ Access Tokens are signed using **RS256**.
   "sid": "ses_xxxxxxxxx",
   "is_active": true,
   "type": "access",
-  "iss": "https://identity.nativeee.in",
-  "aud": "nativeee"
+  "iss": "https://identity.nativee.in",
+  "aud": "nativee"
 }
+```
+
+---
+
+# Authentication Lifecycle
+
+```text
+Register
+
+↓
+
+Login
+
+↓
+
+Access Token (15 min)
+
+↓
+
+Refresh Token (30 days)
+
+↓
+
+Refresh
+
+↓
+
+New Access Token
+
+↓
+
+Logout
+
+↓
+
+Session Revoked
 ```
 
 ---
 
 # Database
 
-## Core Tables
+## Current Tables
 
 - users
-- sessions
+- auth_sessions
 
-## Future Tables
+---
+
+## Planned Tables
 
 - email_verifications
 - password_resets
 - oauth_accounts
-- devices
+- user_devices
 - mfa_recovery_codes
 
 ---
@@ -182,7 +282,7 @@ DATABASE_URL=
 
 IDENTITY_ISSUER=
 
-IDENTITY_AUDIENCE=nativeee
+IDENTITY_AUDIENCE=nativee
 
 IDENTITY_ALGORITHM=RS256
 
@@ -199,19 +299,23 @@ JWT_PUBLIC_KEY=
 
 # Local Development
 
-## Install Dependencies
+## Install
 
 ```bash
 pip install -r requirements.txt
 ```
 
-## Run Migrations
+---
+
+## Run Database Migrations
 
 ```bash
 alembic upgrade head
 ```
 
-## Start the Server
+---
+
+## Start Server
 
 ```bash
 uvicorn main:app --reload
@@ -219,10 +323,12 @@ uvicorn main:app --reload
 
 ---
 
-# Swagger
+# API Documentation
+
+Swagger
 
 ```
-http://localhost:8000/docs
+http://127.0.0.1:8000/docs
 ```
 
 ---
@@ -231,48 +337,98 @@ http://localhost:8000/docs
 
 | Method | Endpoint | Description |
 |---------|----------|-------------|
-| POST | `/auth/register` | Register a user |
-| POST | `/auth/login` | Login |
+| POST | `/auth/register` | Register a new user |
+| POST | `/auth/login` | Authenticate user |
 | POST | `/auth/refresh` | Refresh access token |
-| POST | `/auth/logout` | Logout |
+| POST | `/auth/logout` | Revoke current session |
 | GET | `/auth/me` | Current authenticated user |
 
 ---
 
-# Roadmap
+# Platform Relationships
 
-## Version 1
+```text
+                 Nativee Platform
 
-- ✅ Registration
-- ✅ Login
-- ✅ RS256 JWT
-- ✅ Refresh Tokens
-- ✅ Session Management
+           Nativee Identity
+                  │
+            RS256 JWT
+                  │
+        ┌─────────┴─────────┐
+        ▼                   ▼
+   Nativee API        Nativee Engine
+```
 
-## Version 2
+Nativee Identity authenticates users.
 
+Nativee API manages business resources.
+
+Nativee Engine executes AI workloads.
+
+---
+
+# Current Status
+
+## Completed
+
+- User Registration
+- User Login
+- RS256 JWT
+- Refresh Tokens
+- Session Management
+- Railway Deployment
+- Independent PostgreSQL Database
+- Nativee API Integration
+
+---
+
+## In Progress
+
+- Automatic Business User Provisioning
 - Email Verification
 - Password Reset
+
+---
+
+## Planned
+
+### Identity
+
 - Google OAuth
 - GitHub OAuth
+- Microsoft OAuth
 
-## Version 3
-
-- Organizations
-- Roles
-- Permissions
-- RBAC
-
-## Version 4
+### Security
 
 - MFA
 - Passkeys
 - WebAuthn
 
+### Enterprise
+
+- Organizations
+- Roles
+- Permissions
+- RBAC
+- SSO
+
+---
+
+# Design Principles
+
+Nativee Identity follows four core principles.
+
+- Authentication is centralized.
+- Identity is independent of business data.
+- Every service verifies, but never issues, JWTs.
+- Authentication scales independently from application services.
+
 ---
 
 # License
 
-Copyright © Nativee.
+**Proprietary Software**
+
+Copyright © Nativee Technologies.
 
 All rights reserved.
